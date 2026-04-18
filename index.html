@@ -12,6 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Perawat Sampanahan">
     
+    <!-- PWA Manifest -->
     <link rel="manifest" href='data:application/json,{"name":"Sistem Presensi Perawat","short_name":"Presensi Perawat","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#0d9488","orientation":"portrait","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/3063/3063204.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -158,9 +159,10 @@
 </head>
 <body>
 
+<!-- Perbaikan: Menambahkan ID loading-text yang hilang -->
 <div id="loading" class="hidden fixed top-6 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-2xl z-[2000] flex items-center gap-3 border border-slate-100 ring-4 ring-primary/10">
     <div class="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" style="border-top-color: var(--primary)"></div>
-    <p class="font-extrabold text-slate-700 text-[10px] uppercase tracking-widest whitespace-nowrap">Sinkronisasi Data...</p>
+    <p id="loading-text" class="font-extrabold text-slate-700 text-[10px] uppercase tracking-widest whitespace-nowrap">Sinkronisasi Data...</p>
 </div>
 
 <div id="modern-toast">
@@ -174,7 +176,6 @@
 <div class="app-container">
     <div class="scrollable-content" id="main-scroll">
         
-        <!-- VIEW HOME -->
         <div id="view-home" class="view-content active">
             <div class="login-gradient p-6 pt-12 pb-14 rounded-b-[45px] text-white relative shadow-lg">
                 <div class="flex justify-between items-start">
@@ -231,7 +232,6 @@
             </div>
         </div>
 
-        <!-- VIEW REKAP -->
         <div id="view-rekap" class="view-content">
             <div class="bg-teal-900 p-6 pt-12 pb-10 text-white flex justify-between items-end shadow-lg" id="rekap-header" style="background-color: var(--primary)">
                 <div>
@@ -251,7 +251,6 @@
             </div>
         </div>
 
-        <!-- VIEW CHAT -->
         <div id="view-chat" class="view-content h-full">
             <div id="chat-protected-content" class="hidden flex flex-col h-full bg-slate-50">
                 <div class="bg-white p-4 pt-12 flex justify-between items-center border-b sticky top-0 z-30 shadow-sm">
@@ -267,7 +266,6 @@
                     </div>
                 </div>
             </div>
-            <!-- PIN AUTH Chat -->
             <div id="chat-auth-container" class="p-10 flex flex-col items-center justify-center text-center h-[70vh]">
                 <div class="w-24 h-24 bg-teal-100 rounded-[40px] flex items-center justify-center text-4xl mb-6 shadow-inner" style="background-color: var(--primary-light); color: var(--primary)">💬</div>
                 <h3 class="font-extrabold text-slate-800 text-lg mb-2 uppercase">Koordinasi</h3>
@@ -279,7 +277,6 @@
 
     </div>
 
-    <!-- NAVIGASI -->
     <nav class="dashboard-nav" id="main-nav">
         <div class="nav-grid">
             <button onclick="showView('home')" id="nav-home" class="nav-card-item active"><span class="text-xl">🏠</span><p class="text-[9px] font-bold uppercase">Beranda</p></button>
@@ -290,7 +287,7 @@
     </nav>
 </div>
 
-<!-- MODAL SCAN -->
+<!-- MODALS -->
 <div id="modal-scan" class="modal-overlay" onclick="if(event.target === this) closeModal()">
     <div class="modal-card !p-0 overflow-hidden relative">
         <div class="p-6 flex justify-between items-center bg-white border-b">
@@ -305,7 +302,6 @@
     </div>
 </div>
 
-<!-- MODAL FORM PASIEN -->
 <div id="modal-patient-report" class="modal-overlay" onclick="if(event.target === this) closePatientModal()">
     <div class="modal-card overflow-y-auto max-h-[90vh]">
         <div class="flex justify-between items-center mb-6">
@@ -313,10 +309,10 @@
             <button onclick="closePatientModal()" class="text-slate-400">✕</button>
         </div>
         <div class="space-y-4">
-            <div><label class="form-label font-bold text-[10px]">Nama Pasien</label><input type="text" id="form-pat-name" class="form-input p-3 border w-full rounded-xl outline-none font-bold text-xs uppercase"></div>
-            <div><label class="form-label font-bold text-[10px]">Kondisi</label><input type="text" id="form-pat-cond" class="form-input p-3 border w-full rounded-xl outline-none text-xs"></div>
-            <div><label class="form-label font-bold text-[10px]">Obat</label><input type="text" id="form-pat-med" class="form-input p-3 border w-full rounded-xl outline-none text-xs"></div>
-            <div><label class="form-label font-bold text-[10px]">Jam Minum Berikutnya</label><input type="time" id="form-pat-time" class="form-input p-3 border w-full rounded-xl outline-none text-xs"></div>
+            <div><label class="form-label font-bold text-[10px] uppercase text-slate-400">Nama Pasien</label><input type="text" id="form-pat-name" class="p-3 border w-full rounded-xl outline-none font-bold text-xs uppercase"></div>
+            <div><label class="form-label font-bold text-[10px] uppercase text-slate-400">Kondisi Saat Ini</label><input type="text" id="form-pat-cond" class="p-3 border w-full rounded-xl outline-none text-xs"></div>
+            <div><label class="form-label font-bold text-[10px] uppercase text-slate-400">Nama Obat</label><input type="text" id="form-pat-med" class="p-3 border w-full rounded-xl outline-none text-xs"></div>
+            <div><label class="form-label font-bold text-[10px] uppercase text-slate-400">Jam Minum Berikutnya</label><input type="time" id="form-pat-time" class="p-3 border w-full rounded-xl outline-none text-xs"></div>
             <button onclick="sendPatientReport()" class="w-full bg-teal-600 text-white font-black py-4 rounded-2xl text-[10px] uppercase shadow-lg mt-4" style="background-color: var(--primary)">Kirim Laporan</button>
         </div>
     </div>
@@ -336,14 +332,26 @@
     let h5q = null;
     const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
-    function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+    // Perbaikan: Menambahkan pengecekan null pada elemen sebelum set innerText
+    function showLoading(s, t) { 
+        const el = document.getElementById('loading');
+        const txt = document.getElementById('loading-text');
+        if(el) {
+            el.classList.toggle('hidden', !s);
+            if(t && txt) txt.innerText = t;
+        }
+    }
     function safeSetHTML(id, html) { const el = document.getElementById(id); if(el) el.innerHTML = html; }
+
+    function getFormattedDate(d) {
+        return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    }
 
     function getShiftData() {
         const now = new Date(), hr = now.getHours();
-        if(hr >= 8 && hr < 14) return {l:'Pagi', code:'P'};
-        if(hr >= 14 && hr < 20) return {l:'Siang', code:'S'};
-        return {l:'Malam', code:'M'};
+        if(hr >= 8 && hr < 14) return {l:'Pagi', code:'P', color: 'bg-emerald-500', text: 'text-emerald-500', border: 'border-emerald-100'};
+        if(hr >= 14 && hr < 20) return {l:'Siang', code:'S', color: 'bg-amber-500', text: 'text-amber-500', border: 'border-amber-100'};
+        return {l:'Malam', code:'M', color: 'bg-indigo-600', text: 'text-indigo-600', border: 'border-indigo-100'};
     }
 
     function showToast(title, body) {
@@ -356,7 +364,7 @@
     }
 
     async function fetchData(mode) {
-        if(mode !== 'silent') showLoading(true);
+        if(mode !== 'silent') showLoading(true, "Sinkronisasi...");
         try {
             const r = await fetch(WEB_APP_URL + "?action=getData");
             const d = await r.json();
@@ -387,13 +395,12 @@
     function render() {
         const now = new Date(), sh = getShiftData(), daysInMo = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
         let logDate = new Date(now); if (now.getHours() < 8) logDate.setDate(logDate.getDate() - 1);
-        const logDateStr = `${logDate.getDate()}/${logDate.getMonth()+1}/${logDate.getFullYear()}`;
+        const logDateStr = getFormattedDate(logDate);
 
         document.getElementById('clock').innerText = now.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
         document.getElementById('date-label').innerText = now.toLocaleDateString('id-ID', { weekday:'long', day:'2-digit', month:'long' });
         document.getElementById('shift-label').innerText = "Shift " + sh.l;
         document.getElementById('label-schedule-title').innerText = `📅 Jadwal (${logDate.getDate()} ${monthNames[logDate.getMonth()]})`;
-
         document.getElementById('dynamic-theme').innerHTML = `:root { --primary: ${db.config.themeColor}; --primary-light: ${db.config.themeColor}15; --accent: #f43f5e; --bg: #f8fafc; }`;
 
         document.getElementById('user-display-name').innerText = db.activeUser || "Selamat Datang";
@@ -406,14 +413,13 @@
         const sel = document.getElementById('select-onboarding');
         if(sel) sel.innerHTML = '<option value="">-- Pilih Nama --</option>' + db.officers.map(o => `<option value="${o}" ${db.activeUser===o?'selected':''}>${o}</option>`).join('');
 
-        // TANGKAP SEMUA LOG HARI TUGAS AKTIF
         const todayLogs = db.logs.filter(l => {
             if(!l.date) return false;
             const p = l.date.split('/');
             return `${parseInt(p[0])}/${parseInt(p[1])}/${p[2]}` === logDateStr;
         });
 
-        // RENDER JADWAL (DENGAN TANDA ✓ JIKA SUDAH ABSEN)
+        // RENDER JADWAL (VALIDASI ✓)
         let schH = '';
         ['Pagi','Siang','Malam'].forEach(s => {
             const code = s[0];
@@ -427,7 +433,6 @@
                     ${isCurrentlyShift ? '<span class="text-[8px] bg-teal-600 text-white px-2 py-0.5 rounded-full animate-pulse">AKTIF</span>' : ''}
                 </div>
                 <div class="flex flex-wrap">${assigned.length ? assigned.map(o => {
-                    // Cek apakah perawat ini sudah scan untuk shift ini
                     const isDone = todayLogs.some(l => l.name.trim().toUpperCase() === o.trim().toUpperCase() && l.shift === s);
                     return `<span class="staff-pill ${shiftStyle} ${isDone ? 'opacity-40' : ''}">${o}${isDone ? ' ✓' : ''}</span>`;
                 }).join('') : '<span class="text-slate-300 italic text-[9px]">Kosong</span>'}</div>
@@ -442,7 +447,9 @@
             const confBg = shiftConfig[l.shift] || 'bg-slate-500';
             return `<div class="bg-white p-3 rounded-2xl flex items-center justify-between border ${isCur ? 'border-emerald-100 shadow-sm' : 'opacity-60'} mb-2">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg ${isCur ? confBg : 'bg-slate-100'} text-white flex items-center justify-center font-black text-xs shadow-sm">${l.name[0]}</div>
+                    <div class="w-8 h-8 rounded-lg ${isCur ? confBg : 'bg-slate-100'} text-white flex items-center justify-center font-black text-xs shadow-sm">
+                        ${isCur ? l.name[0] : '<span class="text-slate-400">'+l.name[0]+'</span>'}
+                    </div>
                     <div>
                         <p class="text-[10px] font-black uppercase text-slate-700">${l.name}</p>
                         <p class="text-[7px] font-black uppercase ${isCur ? 'text-emerald-500' : 'text-slate-400'}">${isCur ? 'SEDANG JAGA' : 'SUDAH SELESAI'} • ${l.shift}</p>
@@ -450,7 +457,7 @@
                 </div>
                 <div class="text-right"><p class="text-[9px] font-black text-slate-400 uppercase">${l.time}</p></div>
             </div>`;
-        }).join('') : '<p class="text-center py-4 text-[10px] text-slate-300 font-bold uppercase">Belum ada absen masuk hari ini</p>');
+        }).join('') : '<p class="text-center py-4 text-[10px] text-slate-300 font-bold uppercase tracking-widest">Belum ada absen masuk hari ini</p>');
 
         // RENDER REKAP TABEL
         let rh = `<table class="editor-table"><thead><tr><th class="sticky-col">PERAWAT</th>`;
@@ -460,9 +467,8 @@
             const key = name.toUpperCase(), att = db.attendance[key] || {}, total = Object.values(att).filter(v => v !== '').length;
             rh += `<tr><td class="sticky-col uppercase font-bold text-[10px]">${name}</td>`;
             for(let d=1; d<=daysInMo; d++) {
-                const shiftCode = att[d] || '';
-                const shiftClass = shiftCode === 'P' ? 'cell-P' : shiftCode === 'S' ? 'cell-S' : shiftCode === 'M' ? 'cell-M' : '';
-                rh += `<td class="${shiftClass} font-bold">${shiftCode}</td>`;
+                const sc = att[d] || '';
+                rh += `<td class="${sc?'cell-'+sc:''} font-bold">${sc}</td>`;
             }
             rh += `<td class="sticky-col-right font-black text-slate-700">${total}</td></tr>`;
         });
@@ -488,15 +494,17 @@
                 if(txt === db.config.qrData) {
                     const sh = getShiftData();
                     const now = new Date();
-                    let attendanceDate = now.toLocaleDateString('id-ID');
+                    let attendanceDate = getFormattedDate(now);
                     if(sh.code === 'M' && now.getHours() < 8) {
                         const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-                        attendanceDate = yesterday.toLocaleDateString('id-ID');
+                        attendanceDate = getFormattedDate(yesterday);
                     }
 
                     if(db.logs.some(l => l.name === db.activeUser && l.date === attendanceDate && l.shift === sh.l)) {
                         await h5q.stop(); closeModal();
-                        return alert(`Anda sudah absen untuk Shift ${sh.l} hari ini.`);
+                        showToast("Gagal", `Anda sudah absen untuk Shift ${sh.l} hari ini.`);
+                        if ('speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance("Anda sudah absen untuk shift ini"));
+                        return;
                     }
 
                     let faceImg = null;
@@ -512,8 +520,7 @@
                     }
 
                     await h5q.stop(); closeModal();
-                    showToast("Sedang Memproses", "Mohon tunggu...");
-                    showLoading(true);
+                    showLoading(true, "Memproses...");
 
                     try {
                         const r = await fetch(WEB_APP_URL, { 
@@ -540,7 +547,9 @@
     window.logout = () => { if(confirm("Keluar Sesi?")){ localStorage.removeItem('presensi_user'); db.activeUser=null; render(); } };
     
     window.openPatientModal = () => { document.getElementById('modal-patient-report').style.display = 'flex'; };
+    window.closePatientReport = () => { document.getElementById('modal-patient-report').style.display = 'none'; }; // Alias fix
     window.closePatientModal = () => { document.getElementById('modal-patient-report').style.display = 'none'; };
+    
     window.sendPatientReport = async () => {
         const name = document.getElementById('form-pat-name').value.trim();
         const cond = document.getElementById('form-pat-cond').value.trim();
@@ -548,7 +557,7 @@
         const time = document.getElementById('form-pat-time').value;
         if(!name || !cond) return alert("Nama dan Kondisi wajib diisi!");
         const msg = `📢 LAPORAN PASIEN\n👤 Nama: ${name}\n🌡️ Kondisi: ${cond}\n💊 Obat: ${med || '-'}\n🕒 Jam Minum: ${time || '-'}`;
-        showLoading(true); closePatientModal();
+        showLoading(true, "Mengirim..."); closePatientModal();
         try {
             await fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: 'saveChat', payload: { name: db.activeUser, message: msg, time: new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) } }) });
             fetchData('silent');
@@ -601,6 +610,9 @@
         fetchData('silent');
     };
 
+    window.verifyChatPin = () => { if(document.getElementById('chat-pin-input').value === db.config.chatPin){ db.isChatAuth = true; localStorage.setItem('is_chat_auth','true'); render(); } else alert("PIN Salah!"); };
+    window.logoutChat = () => { db.isChatAuth=false; localStorage.removeItem('is_chat_auth'); render(); };
+
     window.showView = (v) => {
         document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
         document.getElementById('view-'+v).classList.add('active');
@@ -608,9 +620,6 @@
         document.getElementById('nav-'+v).classList.add('active');
         if(v === 'chat' && db.isChatAuth) setTimeout(renderChat, 50);
     };
-
-    window.verifyChatPin = () => { if(document.getElementById('chat-pin-input').value === db.config.chatPin){ db.isChatAuth = true; localStorage.setItem('is_chat_auth','true'); render(); } else alert("PIN Salah!"); };
-    window.logoutChat = () => { db.isChatAuth=false; localStorage.removeItem('is_chat_auth'); render(); };
 
     window.onload = fetchData;
     setInterval(() => fetchData('silent'), 15000);
