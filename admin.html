@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Dashboard Admin - Puskesmas Sampanahan</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #0d9488;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+        }
+        .setting-panel-content { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0, 1, 0, 1); }
+        .setting-panel-content.open { max-height: 5000px; transition: max-height 1s ease-in-out; }
+        .chevron-icon { transition: transform 0.3s; }
+        .chevron-icon.rotate { transform: rotate(180deg); }
+        
+        .rekap-wrapper { width: 100%; overflow-x: auto; border-radius: 16px; background: white; border: 1px solid #f1f5f9; }
+        .editor-table { border-collapse: collapse; min-width: 900px; font-size: 11px; }
+        .editor-table th, .editor-table td { border: 1px solid #f1f5f9; text-align: center; padding: 12px 6px; }
+        .editor-table th { background: #f8fafc; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 9px; }
+        
+        .sticky-col { 
+            position: sticky; left: 0; background: white !important; z-index: 10; 
+            min-width: 120px; text-align: left !important; padding-left: 14px !important; 
+            border-right: 2px solid #f1f5f9 !important; font-weight: 700; color: #1e293b;
+        }
+
+        .scan-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .scan-choice-item { 
+            border: 2px solid #f1f5f9; padding: 16px; border-radius: 20px; text-align: center; 
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: white;
+        }
+        .scan-choice-item.active { border-color: #0d9488; background: #f0fdfa; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.1); }
+        .scan-choice-item p { font-size: 10px; font-weight: 800; text-transform: uppercase; margin-top: 8px; color: #64748b; }
+        .scan-choice-item.active p { color: #0d9488; }
+
+        .nurse-pill { background: #f1f5f9; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-weight: 700; color: #334155; font-size: 11px; border: 1px solid #e2e8f0; }
+        .btn-action-nurse { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: 0.2s; }
+        .btn-delete-nurse { color: #ef4444; background: #fef2f2; }
+        .btn-face-nurse { color: #0d9488; background: #f0fdfa; }
+        .btn-face-nurse.has-face { background: #0d9488; color: white; }
+
+        .cell-P { background-color: #f0fdfa !important; color: #0d9488 !important; }
+        .cell-S { background-color: #fffbeb !important; color: #d97706 !important; }
+        .cell-M { background-color: #eff6ff !important; color: #2563eb !important; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #e2e8f0; transition: .3s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        input:checked + .slider { background-color: #0d9488; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Modal Face Capture */
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); 
+            backdrop-filter: blur(8px); z-index: 2500; 
+            display: none; align-items: center; justify-content: center; 
+            padding: 20px;
+        }
+        .modal-card { 
+            background: white; width: 100%; max-width: 420px; 
+            border-radius: 32px; padding: 24px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes modalPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        
+        #face-preview-container {
+            width: 100%; aspect-ratio: 3/4; background: #000; border-radius: 20px; overflow: hidden; position: relative;
+        }
+        #face-video { width: 100%; height: 100%; object-fit: cover; }
+        .face-overlay { position: absolute; inset: 0; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; margin: 20%; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div id="loading" class="hidden fixed inset-0 bg-white/80 backdrop-blur-sm z-[2000] flex flex-col items-center justify-center text-center px-6">
+    <div class="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+    <p class="mt-4 font-bold text-slate-700 uppercase tracking-widest text-xs">Singkronisasi Cloud...</p>
+</div>
+
+<!-- MODAL PENDAFTARAN WAJAH -->
+<div id="modal-face-reg" class="modal-overlay" onclick="if(event.target === this) closeFaceModal()">
+    <div class="modal-card">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="font-black text-slate-800 text-sm uppercase tracking-tight">Pendaftaran Wajah</h3>
+                <p id="target-nurse-name" class="text-[10px] font-bold text-teal-600 uppercase">Tn. Ahmad</p>
+            </div>
+            <button onclick="closeFaceModal()" class="text-slate-300 hover:text-slate-500">✕</button>
+        </div>
+        
+        <div id="face-preview-container" class="mb-6">
+            <video id="face-video" autoplay playsinline muted></video>
+            <div class="face-overlay"></div>
+            <canvas id="face-canvas" class="hidden"></canvas>
+        </div>
+
+        <div class="space-y-3">
+            <button onclick="captureFace()" id="btn-capture" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-all">Ambil Foto Wajah</button>
+            <p class="text-center text-[8px] text-slate-400 font-bold uppercase leading-relaxed">Pastikan wajah berada di tengah lingkaran dan pencahayaan cukup terang.</p>
+        </div>
+    </div>
+</div>
+
+<div id="settings-auth-container" class="fixed inset-0 z-[1500] flex flex-col items-center justify-center bg-slate-900 text-center text-white px-6">
+    <div class="w-24 h-24 bg-slate-800 rounded-[40px] flex items-center justify-center text-4xl mb-6 shadow-xl border border-slate-700">🔐</div>
+    <h3 class="font-extrabold text-2xl mb-2 uppercase tracking-tighter">Panel Administrator</h3>
+    <p class="text-slate-500 text-xs mb-10 uppercase tracking-widest">Akses Terbatas</p>
+    <input type="password" id="settings-pin-input" maxlength="4" class="w-full max-w-[280px] bg-slate-800 border-2 border-slate-700 p-5 rounded-3xl text-center text-4xl font-black text-teal-400 outline-none focus:border-teal-500 transition-all mb-6" placeholder="••••">
+    <button onclick="verifySettingsPin()" class="w-full max-w-[280px] bg-teal-600 text-white font-black py-5 rounded-3xl text-xs uppercase shadow-xl active:scale-95 transition-all">Verifikasi & Masuk</button>
+</div>
+
+<div id="settings-protected-content" class="hidden min-h-screen pb-40">
+    <header class="bg-slate-900 p-6 pt-12 pb-10 text-white flex justify-between items-end sticky top-0 z-50 shadow-xl border-b border-slate-800">
+        <div>
+            <h2 class="text-2xl font-black uppercase tracking-tighter italic">Admin Console</h2>
+            <p class="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Konfigurasi Sistem Terpusat</p>
+        </div>
+        <button onclick="window.location.reload()" class="bg-white/10 p-3 rounded-2xl hover:bg-rose-500/20 transition-all">🚪</button>
+    </header>
+
+    <div class="max-w-4xl mx-auto p-4 space-y-4">
+        
+        <!-- 1. METODE SCAN -->
+        <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+            <div onclick="togglePanel('panel-scan-method')" class="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-4"><span class="text-2xl">🔍</span><h4 class="font-black text-xs uppercase text-slate-700 tracking-wider">Metode Presensi</h4></div>
+                <span id="icon-panel-scan-method" class="chevron-icon text-slate-300 font-bold text-xs">▼</span>
+            </div>
+            <div id="panel-scan-method" class="setting-panel-content">
+                <div class="px-6 pb-6">
+                    <div class="scan-choice-grid">
+                        <div id="choice-manual" onclick="setScanMethod('manual')" class="scan-choice-item">
+                            <span class="text-3xl">📱</span>
+                            <p>Manual Scan 1 QR</p>
+                        </div>
+                        <div id="choice-face" onclick="setScanMethod('face')" class="scan-choice-item">
+                            <span class="text-3xl">🤳</span>
+                            <p>Scan QR Face</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. PENGATURAN NOTIFIKASI -->
+        <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+            <div onclick="togglePanel('panel-notif')" class="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-4"><span class="text-2xl">🔔</span><h4 class="font-black text-xs uppercase text-slate-700 tracking-wider">Notifikasi & Suara</h4></div>
+                <span id="icon-panel-notif" class="chevron-icon text-slate-300 font-bold text-xs">▼</span>
+            </div>
+            <div id="panel-notif" class="setting-panel-content">
+                <div class="px-6 pb-6 space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                        <div>
+                            <p class="font-black text-[10px] uppercase text-slate-700">Notifikasi Suara (Voice)</p>
+                            <p class="text-[9px] text-slate-400">Ucapkan "Presensi Berhasil" setelah scan</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfg-voice">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                        <div>
+                            <p class="font-black text-[10px] uppercase text-slate-700">Notifikasi Pop-up</p>
+                            <p class="text-[9px] text-slate-400">Tampilkan pesan sukses/gagal di layar</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="cfg-popup">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. MANAJEMEN PERAWAT -->
+        <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+            <div onclick="togglePanel('panel-nurses')" class="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-4"><span class="text-2xl">🧑‍⚕️</span><h4 class="font-black text-xs uppercase text-slate-700 tracking-wider">Daftar Perawat</h4></div>
+                <span id="icon-panel-nurses" class="chevron-icon text-slate-300 font-bold text-xs">▼</span>
+            </div>
+            <div id="panel-nurses" class="setting-panel-content">
+                <div class="px-6 pb-6 space-y-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="new-nurse-name" class="flex-1 p-4 bg-slate-50 border rounded-2xl outline-none font-bold text-xs uppercase" placeholder="Nama Perawat Baru...">
+                        <button onclick="addNurse()" class="bg-teal-600 text-white px-6 rounded-2xl font-black text-[10px] uppercase">Tambah</button>
+                    </div>
+                    <div id="nurse-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. JADWAL JAGA -->
+        <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+            <div onclick="togglePanel('panel-sch')" class="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-4"><span class="text-2xl">📅</span><h4 class="font-black text-xs uppercase text-slate-700 tracking-wider">Editor Jadwal</h4></div>
+                <span id="icon-panel-sch" class="chevron-icon text-slate-300 font-bold text-xs">▼</span>
+            </div>
+            <div id="panel-sch" class="setting-panel-content">
+                <div class="px-6 pb-6">
+                    <div id="editor-jadwal-container" class="rekap-wrapper"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. PENGATURAN JAM SHIFT -->
+        <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+            <div onclick="togglePanel('panel-times')" class="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-4"><span class="text-2xl">🕒</span><h4 class="font-black text-xs uppercase text-slate-700 tracking-wider">Waktu Kerja Shift</h4></div>
+                <span id="icon-panel-times" class="chevron-icon text-slate-300 font-bold text-xs">▼</span>
+            </div>
+            <div id="panel-times" class="setting-panel-content">
+                <div class="px-6 pb-6 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-2xl border text-center">
+                            <p class="font-black text-[10px] uppercase text-teal-600 mb-2">Shift Pagi</p>
+                            <div class="flex items-center gap-2">
+                                <input type="time" id="time-pagi-start" class="w-full p-2 rounded-lg border text-xs">
+                                <input type="time" id="time-pagi-end" class="w-full p-2 rounded-lg border text-xs">
+                            </div>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-2xl border text-center">
+                            <p class="font-black text-[10px] uppercase text-amber-600 mb-2">Shift Siang</p>
+                            <div class="flex items-center gap-2">
+                                <input type="time" id="time-siang-start" class="w-full p-2 rounded-lg border text-xs">
+                                <input type="time" id="time-siang-end" class="w-full p-2 rounded-lg border text-xs">
+                            </div>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-2xl border text-center">
+                            <p class="font-black text-[10px] uppercase text-blue-600 mb-2">Shift Malam</p>
+                            <div class="flex items-center gap-2">
+                                <input type="time" id="time-malam-start" class="w-full p-2 rounded-lg border text-xs">
+                                <input type="time" id="time-malam-end" class="w-full p-2 rounded-lg border text-xs">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. KEAMANAN & SISTEM -->
+        <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+            <div onclick="togglePanel('panel-sec')" class="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50">
+                <div class="flex items-center gap-4"><span class="text-2xl">🔐</span><h4 class="font-black text-xs uppercase text-slate-700 tracking-wider">Keamanan & Sistem</h4></div>
+                <span id="icon-panel-sec" class="chevron-icon text-slate-300 font-bold text-xs">▼</span>
+            </div>
+            <div id="panel-sec" class="setting-panel-content">
+                <div class="px-6 pb-6 space-y-6">
+                    <div class="grid grid-cols-2 gap-4 font-black text-[10px] uppercase">
+                        <div>Admin PIN<input type="text" id="cfg-admin-pin" class="w-full p-4 border rounded-2xl bg-slate-50 mt-1 outline-none focus:border-teal-500"></div>
+                        <div>Chat PIN<input type="text" id="cfg-chat-pin" class="w-full p-4 border rounded-2xl bg-slate-50 mt-1 outline-none focus:border-teal-500"></div>
+                    </div>
+                    <div>
+                        <p class="font-black text-[10px] uppercase mb-1">Isi Data QR Code</p>
+                        <input type="text" id="cfg-qr-data" class="w-full p-4 border rounded-2xl bg-slate-50 font-mono text-xs outline-none focus:border-teal-500">
+                    </div>
+                    <div>
+                        <p class="font-black text-[10px] uppercase mb-1">Warna Aksen Aplikasi</p>
+                        <div class="flex items-center gap-4 p-2 border rounded-2xl bg-slate-50">
+                            <input type="color" id="cfg-theme-color" class="w-12 h-12 rounded-lg bg-transparent cursor-pointer">
+                            <span id="hex-label" class="font-mono text-xs font-bold text-slate-400">#000000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-10">
+            <button onclick="saveFullConfigCloud()" id="btn-save-all" class="w-full bg-teal-600 text-white py-6 rounded-[32px] font-black text-sm uppercase shadow-xl shadow-teal-100 active:scale-[0.98] transition-all">
+                🚀 Simpan Konfigurasi Global
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw-Fl_qSNgqr9oEnn3vUmCtN4bRCZ5M7wz5YMiofUD33pN-kICuL6zubelKVcI_k2luXg/exec";
+    
+    let db = { 
+        officers: [], 
+        schedule: {}, 
+        faceData: {}, // Simpan status pendaftaran wajah (key: name, value: true/false atau base64)
+        config: { 
+            scanMethod: 'manual', 
+            voice: true, 
+            popup: true, 
+            adminPin: "1111", 
+            chatPin: "ugd", 
+            qrData: "SISTEM-PRO-01", 
+            themeColor: '#0d9488',
+            shiftHours: { 
+                Pagi: { start: "08:00", end: "14:00" }, 
+                Siang: { start: "14:00", end: "20:00" }, 
+                Malam: { start: "20:00", end: "08:00" } 
+            } 
+        } 
+    };
+
+    let stream = null;
+    let selectedNurseForFace = null;
+
+    function showLoading(s) { document.getElementById('loading').classList.toggle('hidden', !s); }
+    
+    function togglePanel(id) { 
+        const el = document.getElementById(id);
+        const icon = document.getElementById('icon-' + id);
+        const isOpen = el.classList.contains('open');
+        document.querySelectorAll('.setting-panel-content').forEach(p => p.classList.remove('open'));
+        document.querySelectorAll('.chevron-icon').forEach(i => i.classList.remove('rotate'));
+        if(!isOpen) { el.classList.add('open'); icon.classList.add('rotate'); }
+    }
+
+    async function verifySettingsPin() {
+        const pin = document.getElementById('settings-pin-input').value;
+        showLoading(true);
+        try {
+            const r = await fetch(WEB_APP_URL + "?action=getData");
+            const d = await r.json();
+            if(pin === d.config.adminPin) {
+                document.getElementById('settings-auth-container').classList.add('hidden');
+                document.getElementById('settings-protected-content').classList.remove('hidden');
+                db.officers = d.officers || [];
+                db.schedule = d.schedule || {};
+                db.faceData = d.faceData || {};
+                if(d.config) db.config = Object.assign(db.config, d.config);
+                fillInputs();
+                renderNurses();
+                renderScheduleEditor();
+            } else { alert("PIN Admin tidak valid!"); }
+        } catch(e) { alert("Gagal terhubung ke Cloud Database."); }
+        finally { showLoading(false); }
+    }
+
+    function setScanMethod(method) {
+        db.config.scanMethod = method;
+        document.getElementById('choice-manual').classList.toggle('active', method === 'manual');
+        document.getElementById('choice-face').classList.toggle('active', method === 'face');
+    }
+
+    function fillInputs() {
+        const c = db.config;
+        document.getElementById('cfg-admin-pin').value = c.adminPin;
+        document.getElementById('cfg-chat-pin').value = c.chatPin;
+        document.getElementById('cfg-qr-data').value = c.qrData;
+        document.getElementById('cfg-theme-color').value = c.themeColor;
+        document.getElementById('hex-label').innerText = c.themeColor.toUpperCase();
+        document.getElementById('cfg-voice').checked = (c.voice !== false);
+        document.getElementById('cfg-popup').checked = (c.popup !== false);
+        document.getElementById('time-pagi-start').value = c.shiftHours.Pagi.start;
+        document.getElementById('time-pagi-end').value = c.shiftHours.Pagi.end;
+        document.getElementById('time-siang-start').value = c.shiftHours.Siang.start;
+        document.getElementById('time-siang-end').value = c.shiftHours.Siang.end;
+        document.getElementById('time-malam-start').value = c.shiftHours.Malam.start;
+        document.getElementById('time-malam-end').value = c.shiftHours.Malam.end;
+        setScanMethod(c.scanMethod || 'manual');
+        document.getElementById('cfg-theme-color').oninput = (e) => { document.getElementById('hex-label').innerText = e.target.value.toUpperCase(); };
+    }
+
+    function renderNurses() {
+        const container = document.getElementById('nurse-list-container');
+        container.innerHTML = db.officers.map((name, idx) => {
+            const hasFace = !!db.faceData[name];
+            return `
+            <div class="nurse-pill">
+                <span class="uppercase">${name}</span>
+                <div class="flex gap-1">
+                    <button onclick="openFaceModal('${name}')" class="btn-action-nurse btn-face-nurse ${hasFace ? 'has-face' : ''}" title="Daftarkan Wajah">
+                        ${hasFace ? '👤' : '📸'}
+                    </button>
+                    <button onclick="deleteNurse(${idx})" class="btn-action-nurse btn-delete-nurse">✕</button>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    // LOGIKA PENDAFTARAN WAJAH
+    window.openFaceModal = async (name) => {
+        selectedNurseForFace = name;
+        document.getElementById('target-nurse-name').innerText = name;
+        document.getElementById('modal-face-reg').style.display = 'flex';
+        
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user", width: 480, height: 640 } 
+            });
+            document.getElementById('face-video').srcObject = stream;
+        } catch (e) {
+            alert("Gagal mengakses kamera depan. Pastikan izin kamera aktif.");
+            closeFaceModal();
+        }
+    };
+
+    window.closeFaceModal = () => {
+        if(stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        document.getElementById('modal-face-reg').style.display = 'none';
+        selectedNurseForFace = null;
+    };
+
+    window.captureFace = () => {
+        const video = document.getElementById('face-video');
+        const canvas = document.getElementById('face-canvas');
+        const context = canvas.getContext('2d');
+        
+        // Atur ukuran canvas sesuai video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Gambar frame dari video ke canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Simpan sebagai Base64 (Kualitas rendah agar muat di DB)
+        const faceBase64 = canvas.toDataURL('image/jpeg', 0.5);
+        
+        // Simpan ke database lokal
+        db.faceData[selectedNurseForFace] = faceBase64;
+        
+        alert("Foto wajah " + selectedNurseForFace + " berhasil diambil. Tekan simpan konfigurasi untuk mengirim ke Cloud.");
+        renderNurses();
+        closeFaceModal();
+    };
+
+    window.addNurse = () => {
+        const input = document.getElementById('new-nurse-name');
+        const name = input.value.trim();
+        if(!name) return;
+        if(db.officers.includes(name)) return alert("Nama sudah ada!");
+        db.officers.push(name);
+        input.value = '';
+        renderNurses();
+        renderScheduleEditor();
+    };
+
+    window.deleteNurse = (idx) => {
+        if(confirm("Hapus perawat ini dari sistem?")) {
+            const name = db.officers[idx];
+            db.officers.splice(idx, 1);
+            if(db.schedule[name]) delete db.schedule[name];
+            if(db.faceData[name]) delete db.faceData[name];
+            renderNurses();
+            renderScheduleEditor();
+        }
+    };
+
+    function renderScheduleEditor() {
+        const c = document.getElementById('editor-jadwal-container');
+        const now = new Date(), days = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+        let h = `<table class="editor-table"><thead><tr><th class="sticky-col">PERAWAT</th>`;
+        for(let d=1; d<=days; d++) h += `<th>${d}</th>`;
+        h += `</tr></thead><tbody>`;
+        db.officers.forEach(name => {
+            h += `<tr><td class="sticky-col uppercase font-black text-[10px]">${name}</td>`;
+            for(let d=1; d<=days; d++) {
+                const v = (db.schedule[name] && db.schedule[name][d]) ? db.schedule[name][d] : '';
+                h += `<td class="cell-${v}"><select onchange="updateLocalSch('${name}',${d},this.value,this.parentElement)" class="bg-transparent text-center font-bold w-full outline-none appearance-none cursor-pointer"><option value=""></option><option value="P" ${v==='P'?'selected':''}>P</option><option value="S" ${v==='S'?'selected':''}>S</option><option value="M" ${v==='M'?'selected':''}>M</option></select></td>`;
+            }
+            h += `</tr>`;
+        });
+        c.innerHTML = h + `</tbody></table>`;
+    }
+
+    function updateLocalSch(n, d, v, cell) {
+        if(!db.schedule[n]) db.schedule[n] = {};
+        db.schedule[n][d] = v;
+        cell.className = v ? 'cell-'+v : '';
+    }
+
+    async function saveFullConfigCloud() {
+        const btn = document.getElementById('btn-save-all');
+        btn.innerText = "⏳ SEDANG MENYIMPAN..."; btn.disabled = true; showLoading(true);
+
+        db.config.adminPin = document.getElementById('cfg-admin-pin').value;
+        db.config.chatPin = document.getElementById('cfg-chat-pin').value;
+        db.config.qrData = document.getElementById('cfg-qr-data').value;
+        db.config.themeColor = document.getElementById('cfg-theme-color').value;
+        db.config.voice = document.getElementById('cfg-voice').checked;
+        db.config.popup = document.getElementById('cfg-popup').checked;
+
+        db.config.shiftHours = {
+            Pagi: { start: document.getElementById('time-pagi-start').value, end: document.getElementById('time-pagi-end').value },
+            Siang: { start: document.getElementById('time-siang-start').value, end: document.getElementById('time-siang-end').value },
+            Malam: { start: document.getElementById('time-malam-start').value, end: document.getElementById('time-malam-end').value }
+        };
+
+        try {
+            const r = await fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ 
+                    action: 'updateFullConfig', 
+                    payload: { 
+                        config: db.config, 
+                        officers: db.officers, 
+                        schedule: db.schedule,
+                        faceData: db.faceData // Kirim data wajah ke Cloud
+                    } 
+                })
+            });
+            const res = await r.json();
+            if(res.status === 'success') { alert("Berhasil! Seluruh konfigurasi dan data wajah telah diperbarui di Cloud."); }
+        } catch(e) { alert("Terjadi kesalahan saat menyimpan ke Cloud."); } 
+        finally { btn.innerText = "🚀 Simpan Konfigurasi Global"; btn.disabled = false; showLoading(false); }
+    }
+</script>
+</body>
+</html>
